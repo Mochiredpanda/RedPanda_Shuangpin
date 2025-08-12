@@ -14,7 +14,7 @@ struct KeyboardView: View {
   private let row1 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"]
   private let row2 = ["a", "s", "d", "f", "g", "h", "j", "k", "l"]
   private let row3 = ["shift", "z", "x", "c", "v", "b", "n", "m", "delete"]
-  private let btmRow = ["globe", "123", "space", "return"]
+  private let btmRow = ["123", "emoji", "space", "return"]
   
   // Metrics for custom iOS keyboard
   private struct M{
@@ -23,96 +23,102 @@ struct KeyboardView: View {
     static let interKey: CGFloat = 6
     static let rowGap: CGFloat = 10
     static let sideInset: CGFloat = 4
-    static let row2Indent: CGFloat = 12 // left + right
-    static let row3Indent: CGFloat = 43 // left + right + shift/delete
   }
   
   @Environment(\.colorScheme) private var scheme
   
+  // --- BODY ---
   var body: some View {
     VStack(spacing: M.rowGap) {
-      row(row1)
-      row(row2, horizontalPadding: M.row2Indent)
-      row(row3, horizontalPadding: M.row3Indent, specialWidths: true)
-      bottomBar()
-    }
-    .padding(.horizontal, M.sideInset)
-    .padding(.vertical, 6)
-    .background(KeyboardBackground())
-    .ignoresSafeArea(.keyboard, edges: .bottom)
-  }
-  
-  private func row(_ keys: [String], horizontalPadding: CGFloat? = 0, specialWidths: Bool = false) -> some View {
-    HStack(spacing: M.interKey) {
-      ForEach(keys, id:\.self) { key in
-        KeyButton(label: key, style: keyStyle(for: key)) {
-          onKeyPress(keyEvent(for: key))
+      // row 1
+      HStack(spacing: M.interKey) {
+        ForEach(row1, id: \.self) { key in
+          KeyButton(label: key, style: keyStyle(for: key)) {
+            onKeyPress(key)
+          }
         }
-        .frame(height: M.keyHeight)
-        .frame(minWidth: specialWidths ? specialWidth(for: key): nil)
       }
-    }
-    .padding(.horizontal, horizontalPadding)
-  }
-  
-  // special keys
-  private func bottomBar() -> some View {
-    HStack(spacing: M.interKey) {
-        KeyButton(label: "globe", style: keyStyle(for: "globe")) {
-          onKeyPress("globe")
-        }
-        .frame(height: M.keyHeight)
-        .frame(minWidth: 64)
       
+      // row 2
+      HStack(spacing: M.interKey) {
+        ForEach(row2, id:\.self) {key in
+          KeyButton(label: key, style: keyStyle(for: key)) {
+            onKeyPress(key)
+          }
+        }
+      }
+      .padding(.leading, M.sideInset)
+      .padding(.trailing, M.sideInset)
+      
+      // row 3
+      HStack(spacing: M.interKey) {
+        KeyButton(label: "shift", style: keyStyle(for: "shift")) {
+          onKeyPress(keyEvent(for: "shift"))
+        }
+        .frame(width: M.keyHeight * 1.2)
+        
+        ForEach(row3.dropFirst().dropLast(), id:\.self) {key in
+          KeyButton(label: key, style: keyStyle(for: key)) {
+            onKeyPress(key)
+          }
+        }
+        
+        KeyButton(label: "delete", style: keyStyle(for: "delete")) {
+          onKeyPress(keyEvent(for: "delete"))
+        }
+        .frame(width: M.keyHeight * 1.2)
+      }
+      
+      // TODO: Adjust the width of special key
+      // bottom bar
+      HStack(spacing: M.interKey) {
         KeyButton(label: "123", style: keyStyle(for: "123")) {
           onKeyPress("mode: 123")
         }
-        .frame(height: M.keyHeight)
-        .frame(minWidth: 64)
-      
+        .frame(width: M.keyHeight * 1.2)
+        
+        KeyButton(label: "emoji", style: keyStyle(for: "emoji")) {
+          onKeyPress("emoji")
+        }
+        .frame(width: M.keyHeight * 1.2)
+        
         KeyButton(label: "space", style: keyStyle(for: "space")) {
           onKeyPress(" ")
         }
-        .frame(height: M.keyHeight)
-        .frame(minWidth: 0)
-        .layoutPriority(1)
+        .frame(maxWidth: .infinity)
         
         KeyButton(label: "return", style: keyStyle(for: "return")) {
           onKeyPress("\n")
         }
-        .frame(height: M.keyHeight)
-        .frame(minWidth: 88)
+        .frame(width: M.keyHeight * 1.8)
       }
     }
-  
-  private func specialWidth(for key: String) -> CGFloat? {
-    switch key {
-      case "shift", "delete": return 56
-      default: return nil
-    }
+    .frame(height: (M.keyHeight * 4) + (M.rowGap * 3) + 12)
+    .padding(.horizontal, M.sideInset)
+    .padding(.vertical, 6)
+    .background(KeyboardBackground())
   }
   
-  // special keys
+  // TODO: implement special key event
   private func keyEvent(for key:String) -> String {
     switch key {
-      case "delete": return "{backspace}"
-      case "shift": return "{shift}"
-      default: return key
+    case "delete": return "{backspace}"
+    case "shift": return "{shift}"
+    default: return key
     }
   }
   
   private func keyStyle(for key:String) -> KeyStyle {
     switch key {
-      case "shift", "delete", "globe", "123", "return":
-        return .systemFunction
-      case "space":
-        return .space
-      default:
-        return .letter
+    case "shift", "delete", "emoji", "123", "return":
+      return .systemFunction
+    case "space":
+      return .space
+    default:
+      return .letter
     }
   }
 }
-
 
 struct KeyButton: View {
   let label: String
@@ -176,9 +182,9 @@ struct KeyStyle {
   }
   
   enum Kind { case letter, systemFunction, space }
-    
+  
   let kind:Kind
-    
+  
   static let letter = KeyStyle(kind: .letter)
   static let systemFunction = KeyStyle(kind: .systemFunction)
   static let space = KeyStyle(kind: .space)
@@ -221,16 +227,16 @@ struct KeyStyle {
     switch label {
     case "shift": return "shift"
     case "delete": return "delete.left"
-    case "globe": return "globe"
+    case "emoji": return "face.smiling"
     case "123": return "textformat.123"
     case "return": return "return"
     case "space": return nil
     default: return nil
     }
   }
-  
 }
 
+// TODO: Improve UI style
 struct KeyCallout: View {
   let text: String
   var body: some View {

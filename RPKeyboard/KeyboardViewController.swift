@@ -37,13 +37,6 @@ class KeyboardViewController: UIInputViewController {
           hostingController.view.trailingAnchor.constraint(equalTo: self.view.trailingAnchor)
           ])
         
-//        // New custom button, set size and pos
-//        let myButton = UIButton(type: .system)
-//        myButton.frame = CGRect(x: 10, y: 10, width: 200, height: 50)
-//        myButton.setTitle("Say Hello!", for: .normal)
-//        myButton.addTarget(self, action: #selector(didTapMyButton), for: .touchUpInside)
-//        self.view.addSubview(myButton)
-        
         // Perform custom UI setup here
         self.nextKeyboardButton = UIButton(type: .system)
         
