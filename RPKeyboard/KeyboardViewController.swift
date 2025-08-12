@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import SwiftUI
 
 class KeyboardViewController: UIInputViewController {
 
@@ -19,6 +20,29 @@ class KeyboardViewController: UIInputViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+      
+        // test SwiftUI view hosted in container
+        let keyboardView = KeyboardView { [weak self] character in
+          self?.textDocumentProxy.insertText(character)
+        }
+        let hostingController = UIHostingController(rootView: keyboardView)
+        self.view.addSubview(hostingController.view)
+      
+        // Set up constraints
+        hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+          hostingController.view.topAnchor.constraint(equalTo: self.view.topAnchor),
+          hostingController.view.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+          hostingController.view.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+          hostingController.view.trailingAnchor.constraint(equalTo: self.view.trailingAnchor)
+          ])
+        
+//        // New custom button, set size and pos
+//        let myButton = UIButton(type: .system)
+//        myButton.frame = CGRect(x: 10, y: 10, width: 200, height: 50)
+//        myButton.setTitle("Say Hello!", for: .normal)
+//        myButton.addTarget(self, action: #selector(didTapMyButton), for: .touchUpInside)
+//        self.view.addSubview(myButton)
         
         // Perform custom UI setup here
         self.nextKeyboardButton = UIButton(type: .system)
@@ -34,6 +58,10 @@ class KeyboardViewController: UIInputViewController {
         self.nextKeyboardButton.leftAnchor.constraint(equalTo: self.view.leftAnchor).isActive = true
         self.nextKeyboardButton.bottomAnchor.constraint(equalTo: self.view.bottomAnchor).isActive = true
     }
+  
+    @objc func didTapMyButton() {
+        self.textDocumentProxy.insertText("九節狼雙拼！")
+  }
     
     override func viewWillLayoutSubviews() {
         self.nextKeyboardButton.isHidden = !self.needsInputModeSwitchKey
