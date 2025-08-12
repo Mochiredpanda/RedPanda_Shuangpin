@@ -52,10 +52,12 @@ struct KeyboardView: View {
       
       // row 3
       HStack(spacing: M.interKey) {
+        // Left shift key, 1.2 * w
         KeyButton(label: "shift", style: keyStyle(for: "shift")) {
           onKeyPress(keyEvent(for: "shift"))
         }
         .frame(width: M.keyHeight * 1.2)
+        .padding(.leading, M.sideInset * 2)
         
         ForEach(row3.dropFirst().dropLast(), id:\.self) {key in
           KeyButton(label: key, style: keyStyle(for: key)) {
