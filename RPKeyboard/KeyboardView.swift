@@ -12,15 +12,13 @@ enum KeyboardLayer {
   case uppercase
   case numeric
   case symbols
-  
 }
 
 struct KeyboardView: View {
   var onKeyPress: (String) -> Void
   
   @State private var curLayer: KeyboardLayer = .lowercase
-  
-  
+
   // Main lowercase layer
   private let row1_lower = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"]
   private let row2_lower = ["a", "s", "d", "f", "g", "h", "j", "k", "l"]
@@ -34,15 +32,16 @@ struct KeyboardView: View {
   // Numeric Layer
   private let row1_num = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
   private let row2_num = ["-", "/", "：", "；", "（", "）", "$", "@", "“", "”"]
-  private let row3_num = ["。", "，", "、", "！", "."]
+  private let row3_num = ["#+=", "。", "，", "、", "！", ".", "delete"]
   
   // Symbols Layer
   private let row1_sym = ["【", "】", "{", "}", "#", "%", "^", "*", "+", "="]
   private let row2_sym = ["_", "——", "\\", "|", "～", "《", "》", "€", "&", "·"]
-  private let row3_sym = ["…", ",", "?", "!", "'", "^_^"]
+  private let row3_sym = ["#+=", "…", ",", "?", "!", "'", "^_^", "delete"]
   
   // Bottom Bar
-  private let btmRow = ["123", "emoji", "space", "return"]
+  private let btmRow_alpha = ["123", "emoji", "space", "return"]
+  private let btmRow_num   = ["ABC", "emoji", "space", "return"]
   
   // Computed properties decide cur rows
   private var curRow1: [String] {
@@ -72,6 +71,15 @@ struct KeyboardView: View {
     }
   }
   
+  private var curBtmRow: [String] {
+    switch curLayer {
+    case .lowercase, .uppercase:
+      return btmRow_alpha
+    case .numeric, .symbols:
+      return btmRow_num
+    }
+  }
+  
   // Metrics for custom iOS keyboard
   private struct M{
     static let keyHeight: CGFloat = 46
@@ -86,95 +94,84 @@ struct KeyboardView: View {
   var body: some View {
       VStack(spacing: M.rowGap) {
         GeometryReader { geometry in
-          let unitW = (geometry.size.width - (M.interKey * CGFloat(curRow1.count - 1))) / CGFloat(curRow1.count)
           
           VStack(spacing: M.rowGap) {
-            // row 1
+            // standard width
+            let stdW_10Key = (geometry.size.width - (M.interKey * 9)) / 10
+            
+            // row 1 (10key)
             HStack(spacing: M.interKey) {
               ForEach(curRow1, id: \.self) { key in
                 KeyButton(label: key, style: keyStyle(for: key)) {
-                  onKeyPress(key)
-                  // return to lowercase after uppercase
-                  if curLayer == .uppercase {
-                    curLayer = .lowercase
-                  }
+                  handleKeyPress(for: key)
                 }
-                .frame(width: unitW)
+                .frame(width: stdW_10Key)
               }
             }
             
-            // row 2
+            // row 2 (dynamic layout of Spacer)
             HStack(spacing: M.interKey) {
-              Spacer(minLength: 0)
-              ForEach(curRow2, id:\.self) {key in
+              if curRow2.count < 10 {
+                Spacer(minLength: 0)
+                ForEach(curRow2, id:\.self) {key in
+                  KeyButton(label: key, style: keyStyle(for: key)) {
+                    handleKeyPress(for: key)
+                  }
+                  .frame(width: stdW_10Key)
+                }
+                Spacer(minLength: 0)
+              } else {
+                ForEach(curRow2, id: \.self) { key in
+                  KeyButton(label: key, style: keyStyle(for: key)) { handleKeyPress(for: key) }
+                    .frame(width: stdW_10Key)
+                }
+              }
+            }
+            
+            // row 3 (Dynamic layout)
+            HStack(spacing: M.interKey) {
+              let specialKeyW = stdW_10Key * 1.5
+              let midKeyCount = CGFloat(curRow3.count - 2)
+              let midKeysW = geometry.size.width - (specialKeyW * 2) - (M.interKey * (midKeyCount + 1))
+              let midKeyW = midKeysW / midKeyCount
+              
+              ForEach(curRow3, id: \.self) { key in
+                let keyWidth: CGFloat = {
+                  if key == curRow3.first || key == curRow3.last {
+                    return specialKeyW
+                  }
+                  return midKeyW
+                }()
+                
                 KeyButton(label: key, style: keyStyle(for: key)) {
-                  onKeyPress(key)
-                  if curLayer == .uppercase {
-                    curLayer = .lowercase
-                  }
+                  handleKeyPress(for: key)
                 }
-                .frame(width: unitW)
+                .frame(width: keyWidth)
               }
-              Spacer(minLength: 0)
             }
             
-            // row 3, with special keys "shift" and "delete"
+            // bottom bar (dynamic)
             HStack(spacing: M.interKey) {
-              let specialKeyW = unitW * 1.5
-              let midKeysW = geometry.size.width - (specialKeyW * 2) - (M.interKey * CGFloat(curRow3.count - 1))
-              let midKeyW = midKeysW / CGFloat(curRow3.count - 2)
-              
-              KeyButton(label: "shift", style: keyStyle(for: "shift")) {
-                withAnimation(.easeInOut(duration: 0.1)) {
-                  if curLayer == .lowercase {
-                    curLayer = .uppercase
-                  } else if curLayer == .uppercase {
-                    curLayer = .lowercase
+              ForEach(curBtmRow, id: \.self) { key in
+                // flexible width for space bar
+                if key == "space" {
+                  KeyButton(label: key, style: keyStyle(for: key)) {
+                    handleKeyPress(for: key)
                   }
+                  .frame(maxWidth: .infinity)
+                } else {
+                  // widths for other btmbar keys
+                  let keyWidth: CGFloat = {
+                    if key == "return" { return geometry.size.width * 0.2 }
+                    // '123'/'ABC' and 'emoji'
+                    return stdW_10Key * 1.25
+                  }()
+                  KeyButton(label: key, style: keyStyle(for: key)) {
+                    handleKeyPress(for: key)
+                  }
+                  .frame(width: keyWidth)
                 }
               }
-              .frame(width: specialKeyW)
-              
-              ForEach(curRow3.dropFirst().dropLast(), id:\.self) {key in
-                KeyButton(label: key, style: keyStyle(for: key)) {
-                  onKeyPress(key)
-                  if curLayer == .uppercase {
-                    curLayer = .lowercase
-                  }
-                }
-                .frame(width: midKeyW)
-              }
-              
-              KeyButton(label: "delete", style: keyStyle(for: "delete")) {
-                onKeyPress(keyEvent(for: "delete"))
-              }
-              .frame(width: specialKeyW)
-            }
-            
-            // bottom bar
-            HStack(spacing: M.interKey) {
-              let modKeyW = unitW * 1.25
-              
-              KeyButton(label: "123", style: keyStyle(for: "123")) {
-                onKeyPress("mode: 123")
-              }
-              .frame(width: modKeyW)
-              
-              KeyButton(label: "emoji", style: keyStyle(for: "emoji")) {
-                onKeyPress("emoji")
-              }
-              .frame(width: modKeyW)
-              
-              KeyButton(label: "space", style: keyStyle(for: "space")) {
-                onKeyPress(" ")
-              }
-              .frame(maxWidth: .infinity)
-              
-              // Right return key
-              KeyButton(label: "return", style: keyStyle(for: "return")) {
-                onKeyPress("\n")
-              }
-              .frame(width: geometry.size.width * 0.2)
             }
           }
         }
@@ -184,7 +181,40 @@ struct KeyboardView: View {
       .frame(height: (M.keyHeight * 4) + (M.rowGap * 3) + 12)
       .background(KeyboardBackground())
     }
-}
+  
+  // dynamically handles the curLayer behaviors
+  private func handleKeyPress(for key: String) {
+    switch key {
+      // State-changing keys
+    case "shift", "#+=":
+      withAnimation(.easeInOut(duration: 0.1)) {
+        switch curLayer {
+        case .lowercase: curLayer = .uppercase
+        case .uppercase: curLayer = .lowercase
+        case .numeric: curLayer = .symbols
+        case .symbols: curLayer = .numeric
+        }
+      }
+    case "123":
+      withAnimation(.easeInOut(duration: 0.1)) { curLayer = .numeric }
+    case "ABC":
+      withAnimation(.easeInOut(duration: 0.1)) { curLayer = .lowercase }
+      
+      // Engine command keys
+    case "delete":
+      onKeyPress("{backspace}")
+    case "return":
+      onKeyPress("\n")
+      
+      // Character keys
+    default:
+      onKeyPress(key)
+      // After typing an uppercase letter, return to lowercase
+      if curLayer == .uppercase {
+        curLayer = .lowercase
+      }
+    }
+  }
   
   // TODO: implement special key event
   private func keyEvent(for key:String) -> String {
@@ -205,6 +235,8 @@ struct KeyboardView: View {
       return .letter
     }
   }
+  
+}
 
 struct KeyButton: View {
   let label: String
@@ -234,7 +266,6 @@ struct KeyButton: View {
           } else {
             Text(style.displayText(for: label))
               .font(.system(size: 20, weight: .regular, design: .default))
-              .textCase(.lowercase)
           }
         }
         .foregroundStyle(style.foreground)
