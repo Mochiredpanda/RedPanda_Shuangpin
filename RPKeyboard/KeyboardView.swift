@@ -7,14 +7,70 @@
 
 import SwiftUI
 
+enum KeyboardLayer {
+  case lowercase
+  case uppercase
+  case numeric
+  case symbols
+  
+}
+
 struct KeyboardView: View {
   var onKeyPress: (String) -> Void
   
-  // Isolate each row on keyboard
-  private let row1 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"]
-  private let row2 = ["a", "s", "d", "f", "g", "h", "j", "k", "l"]
-  private let row3 = ["shift", "z", "x", "c", "v", "b", "n", "m", "delete"]
+  @State private var currentLayer: KeyboardLayer = .lowercase
+  
+  
+  // Main lowercase layer
+  private let row1_lower = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"]
+  private let row2_lower = ["a", "s", "d", "f", "g", "h", "j", "k", "l"]
+  private let row3_lower = ["shift", "z", "x", "c", "v", "b", "n", "m", "delete"]
+  
+  // Main uppercase layer
+  private let row1_upper = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"]
+  private let row2_upper = ["A", "S", "D", "F", "G", "H", "J", "K", "L"]
+  private let row3_upper = ["shift", "Z", "X", "C", "V", "B", "N", "M", "delete"]
+  
+  // Numeric Layer
+  private let row1_num = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+  private let row2_num = ["-", "/", "：", "；", "（", "）", "$", "@", "“", "”"]
+  private let row3_num = ["。", "，", "、", "！", "."]
+  
+  // Symbols Layer
+  private let row1_sym = ["【", "】", "{", "}", "#", "%", "^", "*", "+", "="]
+  private let row2_sym = ["_", "——", "\\", "|", "～", "《", "》", "€", "&", "·"]
+  private let row3_sym = ["…", ",", "?", "!", "'", "^_^"]
+  
+  // Bottom Bar
   private let btmRow = ["123", "emoji", "space", "return"]
+  
+  // Computed properties decide cur rows
+  private var curRow1: [String] {
+    switch currentLayer {
+    case .lowercase: return row1_lower
+    case .uppercase: return row1_upper
+    case .numeric: return row1_num
+    case .symbols: return row1_sym
+    }
+  }
+  
+  private var curRow2: [String] {
+    switch currentLayer {
+    case .lowercase: return row2_lower
+    case .uppercase: return row2_upper
+    case .numeric: return row2_num
+    case .symbols: return row2_sym
+    }
+  }
+  
+  private var curRow3: [String] {
+    switch currentLayer {
+    case .lowercase: return row3_lower
+    case .uppercase: return row3_upper
+    case .numeric: return row3_num
+    case .symbols: return row3_sym
+    }
+  }
   
   // Metrics for custom iOS keyboard
   private struct M{
@@ -23,19 +79,19 @@ struct KeyboardView: View {
     static let rowGap: CGFloat = 10
     static let sideInset: CGFloat = 4
   }
-  
+
   @Environment(\.colorScheme) private var scheme
   
   // --- BODY ---
   var body: some View {
       VStack(spacing: M.rowGap) {
         GeometryReader { geometry in
-          let unitW = (geometry.size.width - (M.interKey * CGFloat(row1.count - 1))) / CGFloat(row1.count)
+          let unitW = (geometry.size.width - (M.interKey * CGFloat(curRow1.count - 1))) / CGFloat(curRow1.count)
           
           VStack(spacing: M.rowGap) {
             // row 1
             HStack(spacing: M.interKey) {
-              ForEach(row1, id: \.self) { key in
+              ForEach(curRow1, id: \.self) { key in
                 KeyButton(label: key, style: keyStyle(for: key)) {
                   onKeyPress(key)
                 }
@@ -46,7 +102,7 @@ struct KeyboardView: View {
             // row 2
             HStack(spacing: M.interKey) {
               Spacer(minLength: 0)
-              ForEach(row2, id:\.self) {key in
+              ForEach(curRow2, id:\.self) {key in
                 KeyButton(label: key, style: keyStyle(for: key)) {
                   onKeyPress(key)
                 }
@@ -58,15 +114,15 @@ struct KeyboardView: View {
             // row 3, with special keys "shift" and "delete"
             HStack(spacing: M.interKey) {
               let specialKeyW = unitW * 1.5
-              let midKeysW = geometry.size.width - (specialKeyW * 2) - (M.interKey * CGFloat(row3.count - 1))
-              let midKeyW = midKeysW / CGFloat(row3.count - 2)
+              let midKeysW = geometry.size.width - (specialKeyW * 2) - (M.interKey * CGFloat(curRow3.count - 1))
+              let midKeyW = midKeysW / CGFloat(curRow3.count - 2)
               
               KeyButton(label: "shift", style: keyStyle(for: "shift")) {
                 onKeyPress(keyEvent(for: "shift"))
               }
               .frame(width: specialKeyW)
               
-              ForEach(row3.dropFirst().dropLast(), id:\.self) {key in
+              ForEach(curRow3.dropFirst().dropLast(), id:\.self) {key in
                 KeyButton(label: key, style: keyStyle(for: key)) {
                   onKeyPress(key)
                 }
