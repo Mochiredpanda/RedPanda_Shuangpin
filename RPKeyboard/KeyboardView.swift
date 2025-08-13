@@ -37,11 +37,11 @@ struct KeyboardView: View {
   // Symbols Layer
   private let row1_sym = ["【", "】", "{", "}", "#", "%", "^", "*", "+", "="]
   private let row2_sym = ["_", "——", "\\", "|", "～", "《", "》", "€", "&", "·"]
-  private let row3_sym = ["#+=", "…", ",", "?", "!", "'", "^_^", "delete"]
+  private let row3_sym = ["123", "…", ",", "?", "!", "'", "^_^", "delete"]
   
   // Bottom Bar
   private let btmRow_alpha = ["123", "emoji", "space", "return"]
-  private let btmRow_num   = ["ABC", "emoji", "space", "return"]
+  private let btmRow_num   = ["双拼", "emoji", "space", "return"]
   
   // Computed properties decide cur rows
   private var curRow1: [String] {
@@ -89,6 +89,18 @@ struct KeyboardView: View {
   }
 
   @Environment(\.colorScheme) private var scheme
+  
+  // TODO: fix - shift with full arrow symbol in uppercase layer
+  
+  // TODO: feat - long hold shift to lock uppercase
+  
+  // TODO: feat - emoji keyboard layer
+  
+  // TODO: feat - link special Kaomoji input solutions, with rime(?)
+  
+  // TODO: feat - add key behavior for space, delete
+  
+  // TODO: fix - long hold button show better uppercase UI (larger key unit, less transparent, upper location)
   
   // --- BODY ---
   var body: some View {
