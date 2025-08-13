@@ -19,7 +19,6 @@ struct KeyboardView: View {
   // Metrics for custom iOS keyboard
   private struct M{
     static let keyHeight: CGFloat = 46
-    static let keyCorner: CGFloat = 7
     static let interKey: CGFloat = 6
     static let rowGap: CGFloat = 10
     static let sideInset: CGFloat = 4
@@ -29,77 +28,91 @@ struct KeyboardView: View {
   
   // --- BODY ---
   var body: some View {
-    VStack(spacing: M.rowGap) {
-      // row 1
-      HStack(spacing: M.interKey) {
-        ForEach(row1, id: \.self) { key in
-          KeyButton(label: key, style: keyStyle(for: key)) {
-            onKeyPress(key)
+      VStack(spacing: M.rowGap) {
+        GeometryReader { geometry in
+          let unitW = (geometry.size.width - (M.interKey * CGFloat(row1.count - 1))) / CGFloat(row1.count)
+          
+          VStack(spacing: M.rowGap) {
+            // row 1
+            HStack(spacing: M.interKey) {
+              ForEach(row1, id: \.self) { key in
+                KeyButton(label: key, style: keyStyle(for: key)) {
+                  onKeyPress(key)
+                }
+                .frame(width: unitW)
+              }
+            }
+            
+            // row 2
+            HStack(spacing: M.interKey) {
+              Spacer(minLength: 0)
+              ForEach(row2, id:\.self) {key in
+                KeyButton(label: key, style: keyStyle(for: key)) {
+                  onKeyPress(key)
+                }
+                .frame(width: unitW)
+              }
+              Spacer(minLength: 0)
+            }
+            
+            // row 3, with special keys "shift" and "delete"
+            HStack(spacing: M.interKey) {
+              let specialKeyW = unitW * 1.5
+              let midKeysW = geometry.size.width - (specialKeyW * 2) - (M.interKey * CGFloat(row3.count - 1))
+              let midKeyW = midKeysW / CGFloat(row3.count - 2)
+              
+              KeyButton(label: "shift", style: keyStyle(for: "shift")) {
+                onKeyPress(keyEvent(for: "shift"))
+              }
+              .frame(width: specialKeyW)
+              
+              ForEach(row3.dropFirst().dropLast(), id:\.self) {key in
+                KeyButton(label: key, style: keyStyle(for: key)) {
+                  onKeyPress(key)
+                }
+                .frame(width: midKeyW)
+              }
+              
+              KeyButton(label: "delete", style: keyStyle(for: "delete")) {
+                onKeyPress(keyEvent(for: "delete"))
+              }
+              .frame(width: specialKeyW)
+            }
+            
+            // bottom bar
+            HStack(spacing: M.interKey) {
+              let modKeyW = unitW * 1.25
+              
+              KeyButton(label: "123", style: keyStyle(for: "123")) {
+                onKeyPress("mode: 123")
+              }
+              .frame(width: modKeyW)
+              
+              KeyButton(label: "emoji", style: keyStyle(for: "emoji")) {
+                onKeyPress("emoji")
+              }
+              .frame(width: modKeyW)
+              
+              KeyButton(label: "space", style: keyStyle(for: "space")) {
+                onKeyPress(" ")
+              }
+              .frame(maxWidth: .infinity)
+              
+              // Right return key
+              KeyButton(label: "return", style: keyStyle(for: "return")) {
+                onKeyPress("\n")
+              }
+              .frame(width: geometry.size.width * 0.2)
+            }
           }
         }
       }
-      
-      // row 2
-      HStack(spacing: M.interKey) {
-        ForEach(row2, id:\.self) {key in
-          KeyButton(label: key, style: keyStyle(for: key)) {
-            onKeyPress(key)
-          }
-        }
-      }
-      .padding(.leading, M.sideInset)
-      .padding(.trailing, M.sideInset)
-      
-      // row 3
-      HStack(spacing: M.interKey) {
-        // Left shift key, 1.2 * w
-        KeyButton(label: "shift", style: keyStyle(for: "shift")) {
-          onKeyPress(keyEvent(for: "shift"))
-        }
-        .frame(width: M.keyHeight * 1.2)
-        .padding(.leading, M.sideInset * 2)
-        
-        ForEach(row3.dropFirst().dropLast(), id:\.self) {key in
-          KeyButton(label: key, style: keyStyle(for: key)) {
-            onKeyPress(key)
-          }
-        }
-        
-        KeyButton(label: "delete", style: keyStyle(for: "delete")) {
-          onKeyPress(keyEvent(for: "delete"))
-        }
-        .frame(width: M.keyHeight * 1.2)
-      }
-      
-      // TODO: Adjust the width of special key
-      // bottom bar
-      HStack(spacing: M.interKey) {
-        KeyButton(label: "123", style: keyStyle(for: "123")) {
-          onKeyPress("mode: 123")
-        }
-        .frame(width: M.keyHeight * 1.2)
-        
-        KeyButton(label: "emoji", style: keyStyle(for: "emoji")) {
-          onKeyPress("emoji")
-        }
-        .frame(width: M.keyHeight * 1.2)
-        
-        KeyButton(label: "space", style: keyStyle(for: "space")) {
-          onKeyPress(" ")
-        }
-        .frame(maxWidth: .infinity)
-        
-        KeyButton(label: "return", style: keyStyle(for: "return")) {
-          onKeyPress("\n")
-        }
-        .frame(width: M.keyHeight * 1.8)
-      }
+      .padding(.horizontal, M.sideInset)
+      .padding(.vertical, 6)
+      .frame(height: (M.keyHeight * 4) + (M.rowGap * 3) + 12)
+      .background(KeyboardBackground())
     }
-    .frame(height: (M.keyHeight * 4) + (M.rowGap * 3) + 12)
-    .padding(.horizontal, M.sideInset)
-    .padding(.vertical, 6)
-    .background(KeyboardBackground())
-  }
+}
   
   // TODO: implement special key event
   private func keyEvent(for key:String) -> String {
@@ -120,7 +133,6 @@ struct KeyboardView: View {
       return .letter
     }
   }
-}
 
 struct KeyButton: View {
   let label: String
