@@ -18,7 +18,7 @@ enum KeyboardLayer {
 struct KeyboardView: View {
   var onKeyPress: (String) -> Void
   
-  @State private var currentLayer: KeyboardLayer = .lowercase
+  @State private var curLayer: KeyboardLayer = .lowercase
   
   
   // Main lowercase layer
@@ -46,7 +46,7 @@ struct KeyboardView: View {
   
   // Computed properties decide cur rows
   private var curRow1: [String] {
-    switch currentLayer {
+    switch curLayer {
     case .lowercase: return row1_lower
     case .uppercase: return row1_upper
     case .numeric: return row1_num
@@ -55,7 +55,7 @@ struct KeyboardView: View {
   }
   
   private var curRow2: [String] {
-    switch currentLayer {
+    switch curLayer {
     case .lowercase: return row2_lower
     case .uppercase: return row2_upper
     case .numeric: return row2_num
@@ -64,7 +64,7 @@ struct KeyboardView: View {
   }
   
   private var curRow3: [String] {
-    switch currentLayer {
+    switch curLayer {
     case .lowercase: return row3_lower
     case .uppercase: return row3_upper
     case .numeric: return row3_num
@@ -94,6 +94,10 @@ struct KeyboardView: View {
               ForEach(curRow1, id: \.self) { key in
                 KeyButton(label: key, style: keyStyle(for: key)) {
                   onKeyPress(key)
+                  // return to lowercase after uppercase
+                  if curLayer == .uppercase {
+                    curLayer = .lowercase
+                  }
                 }
                 .frame(width: unitW)
               }
@@ -105,6 +109,9 @@ struct KeyboardView: View {
               ForEach(curRow2, id:\.self) {key in
                 KeyButton(label: key, style: keyStyle(for: key)) {
                   onKeyPress(key)
+                  if curLayer == .uppercase {
+                    curLayer = .lowercase
+                  }
                 }
                 .frame(width: unitW)
               }
@@ -118,13 +125,22 @@ struct KeyboardView: View {
               let midKeyW = midKeysW / CGFloat(curRow3.count - 2)
               
               KeyButton(label: "shift", style: keyStyle(for: "shift")) {
-                onKeyPress(keyEvent(for: "shift"))
+                withAnimation(.easeInOut(duration: 0.1)) {
+                  if curLayer == .lowercase {
+                    curLayer = .uppercase
+                  } else if curLayer == .uppercase {
+                    curLayer = .lowercase
+                  }
+                }
               }
               .frame(width: specialKeyW)
               
               ForEach(curRow3.dropFirst().dropLast(), id:\.self) {key in
                 KeyButton(label: key, style: keyStyle(for: key)) {
                   onKeyPress(key)
+                  if curLayer == .uppercase {
+                    curLayer = .lowercase
+                  }
                 }
                 .frame(width: midKeyW)
               }
