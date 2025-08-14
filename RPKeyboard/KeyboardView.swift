@@ -90,8 +90,6 @@ struct KeyboardView: View {
 
   @Environment(\.colorScheme) private var scheme
   
-  // TODO: fix - shift with full arrow symbol in uppercase layer
-  
   // TODO: feat - long hold shift to lock uppercase
   
   // TODO: feat - emoji keyboard layer
@@ -114,7 +112,7 @@ struct KeyboardView: View {
             // row 1 (10key)
             HStack(spacing: M.interKey) {
               ForEach(curRow1, id: \.self) { key in
-                KeyButton(label: key, style: keyStyle(for: key)) {
+                KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) {
                   handleKeyPress(for: key)
                 }
                 .frame(width: stdW_10Key)
@@ -126,7 +124,7 @@ struct KeyboardView: View {
               if curRow2.count < 10 {
                 Spacer(minLength: 0)
                 ForEach(curRow2, id:\.self) {key in
-                  KeyButton(label: key, style: keyStyle(for: key)) {
+                  KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) {
                     handleKeyPress(for: key)
                   }
                   .frame(width: stdW_10Key)
@@ -134,7 +132,7 @@ struct KeyboardView: View {
                 Spacer(minLength: 0)
               } else {
                 ForEach(curRow2, id: \.self) { key in
-                  KeyButton(label: key, style: keyStyle(for: key)) { handleKeyPress(for: key) }
+                  KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) { handleKeyPress(for: key) }
                     .frame(width: stdW_10Key)
                 }
               }
@@ -155,7 +153,7 @@ struct KeyboardView: View {
                   return midKeyW
                 }()
                 
-                KeyButton(label: key, style: keyStyle(for: key)) {
+                KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) {
                   handleKeyPress(for: key)
                 }
                 .frame(width: keyWidth)
@@ -167,7 +165,7 @@ struct KeyboardView: View {
               ForEach(curBtmRow, id: \.self) { key in
                 // flexible width for space bar
                 if key == "space" {
-                  KeyButton(label: key, style: keyStyle(for: key)) {
+                  KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) {
                     handleKeyPress(for: key)
                   }
                   .frame(maxWidth: .infinity)
@@ -178,7 +176,7 @@ struct KeyboardView: View {
                     // '123'/'ABC' and 'emoji'
                     return stdW_10Key * 1.25
                   }()
-                  KeyButton(label: key, style: keyStyle(for: key)) {
+                  KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) {
                     handleKeyPress(for: key)
                   }
                   .frame(width: keyWidth)
@@ -250,10 +248,13 @@ struct KeyboardView: View {
   
 }
 
+// handles key button behaviors
 struct KeyButton: View {
   let label: String
   let style: KeyStyle
+  let curLayer: KeyboardLayer
   var action: () -> Void
+  
   
   @State private var isPressed = false
   
@@ -272,8 +273,9 @@ struct KeyButton: View {
           .shadow(radius: isPressed ? 0:1, x:0, y:1)
         
         // icon or text
+        //  pass curLayer
         Group {
-          if let sys = style.systemImage(for: label) {
+          if let sys = style.systemImage(for: label, curLayer: self.curLayer) {
             Image(systemName: sys).font(.system(size: 18, weight: .regular))
           } else {
             Text(style.displayText(for: label))
@@ -352,15 +354,18 @@ struct KeyStyle {
     }
   }
   
-  func systemImage(for label: String) -> String? {
+  func systemImage(for label: String, curLayer: KeyboardLayer) -> String? {
     switch label {
-    case "shift": return "shift"
-    case "delete": return "delete.left"
-    case "emoji": return "face.smiling"
-    case "123": return "textformat.123"
-    case "return": return "return"
-    case "space": return nil
-    default: return nil
+      case "shift", "#+=":
+        return curLayer == .uppercase || curLayer == .symbols ? "shift.fill" : "shift"
+      case "delete": return "delete.left"
+      case "emoji": return "face.smiling"
+      case "123", "": return "textformat.123"
+      case "return": return "return"
+      case "space": return nil
+      // TODO: resolve the 双拼 button view, and the link to return to main layer
+      case "双拼": return "textformat.双拼"
+      default: return nil
     }
   }
 }
