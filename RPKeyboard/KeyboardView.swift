@@ -100,6 +100,8 @@ struct KeyboardView: View {
   
   // TODO: fix - long hold button show better uppercase UI (larger key unit, less transparent, upper location)
   
+  // TODO: fix - UI Invalid frame dimension errors
+  
   // --- BODY ---
   var body: some View {
       VStack(spacing: M.rowGap) {
@@ -258,9 +260,10 @@ struct KeyButton: View {
   
   
   @State private var isPressed = false
-  // long press for rapid delete
-  @State private var initialDeleteTimer: Timer?
+  // Delete button behaviors states
+  @State private var initialDeleteTimer: Timer? // Rapid deletion
   @State private var repeatingDeleteTimer: Timer?
+  @State private var accelerateDeleteTimer: Timer? // Accelerated deletion
   
   var body: some View {
     Button {
@@ -316,27 +319,56 @@ struct KeyButton: View {
     )
   }
 
+  // ==== Speed control of deletion ====
+  
+  private enum DeletionSpeed {
+    case slow
+    case fast 
+    
+    var interval: TimeInterval {
+      switch self {
+      case .slow:
+        return 0.1
+      case .fast:
+        return 0.05
+      }
+    }
+  }
 
   // long press timer helper method
   private func startDeleteTimers() {
-    cancelDeleteTimers()
+    cancelDeleteTimers() // invalidate existing timer for safety
+    
     initialDeleteTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { _ in
-      self.startRepeatingTimer()
+      self.startRepeatingTimer(speed: .slow)
+      
+      self.accelerateDeleteTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+        self.accelerateDeletion()
+      }
     }
   }
 
-  private func cancelDeleteTimers() {
-    initialDeleteTimer?.invalidate()
+  // Starts timer at dif speed
+  private func startRepeatingTimer(speed: DeletionSpeed) {
     repeatingDeleteTimer?.invalidate()
-    initialDeleteTimer = nil
-    repeatingDeleteTimer = nil
-  }
-
-  private func startRepeatingTimer() {
-    repeatingDeleteTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+    
+    repeatingDeleteTimer = Timer.scheduledTimer(withTimeInterval: speed.interval, repeats: true) { _ in
       haptic()
       action() 
     }
+  }
+  
+  private func accelerateDeletion() {
+    self.startRepeatingTimer(speed: .fast)
+  }
+  
+  private func cancelDeleteTimers() {
+    initialDeleteTimer?.invalidate()
+    repeatingDeleteTimer?.invalidate()
+    accelerateDeleteTimer?.invalidate()
+    initialDeleteTimer = nil
+    repeatingDeleteTimer = nil
+    accelerateDeleteTimer = nil
   }
   
   private func haptic() {
