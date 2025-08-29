@@ -22,8 +22,16 @@ class KeyboardViewController: UIInputViewController {
         super.viewDidLoad()
       
         // test SwiftUI view hosted in container
-        let keyboardView = KeyboardView { [weak self] character in
-          self?.textDocumentProxy.insertText(character)
+        let keyboardView = KeyboardView { [weak self] key in
+            guard let self = self else { return }
+            
+            switch key {
+            case "{backspace}":
+                self.textDocumentProxy.deleteBackward()
+            // Return key "\n" is handled in KeyboardView
+            default:
+                self.textDocumentProxy.insertText(key)
+            }
         }
         let hostingController = UIHostingController(rootView: keyboardView)
         self.view.addSubview(hostingController.view)

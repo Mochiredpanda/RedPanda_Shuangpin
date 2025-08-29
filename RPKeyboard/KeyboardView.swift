@@ -96,7 +96,7 @@ struct KeyboardView: View {
   
   // TODO: feat - link special Kaomoji input solutions, with rime(?)
   
-  // TODO: feat - add key behavior for space, delete
+  // TODO: feat - add key behavior for space
   
   // TODO: fix - long hold button show better uppercase UI (larger key unit, less transparent, upper location)
   
@@ -226,12 +226,13 @@ struct KeyboardView: View {
     }
   }
   
-  // TODO: implement special key event
   private func keyEvent(for key:String) -> String {
     switch key {
-    case "delete": return "{backspace}"
-    case "shift": return "{shift}"
-    default: return key
+      // delete and long-press is handled in Controller
+      case "delete": return "{backspace}"
+      // TODO: build shift key behavior
+      case "shift": return "{shift}"
+      default: return key
     }
   }
   
@@ -257,9 +258,13 @@ struct KeyButton: View {
   
   
   @State private var isPressed = false
+  // long press for rapid delete
+  @State private var initialDeleteTimer: Timer?
+  @State private var repeatingDeleteTimer: Timer?
   
   var body: some View {
     Button {
+      // single tap for all keys
       haptic()
       action()
     } label: {
@@ -296,15 +301,48 @@ struct KeyButton: View {
     .buttonStyle(.plain)
     .simultaneousGesture(
       DragGesture(minimumDistance:0)
-        .onChanged { _ in withAnimation(.easeOut(duration: 0.06)) { isPressed = true} }
-        .onEnded { _ in withAnimation(.easeIn(duration: 0.08)) { isPressed = false} }
+        .onChanged { _ in 
+          if !isPressed {
+            isPressed = true
+            if label == "delete" {
+              startDeleteTimers()
+            }
+          }
+        }
+        .onEnded { _ in
+          isPressed = false
+          cancelDeleteTimers()
+        }
     )
+  }
+
+
+  // long press timer helper method
+  private func startDeleteTimers() {
+    cancelDeleteTimers()
+    initialDeleteTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { _ in
+      self.startRepeatingTimer()
+    }
+  }
+
+  private func cancelDeleteTimers() {
+    initialDeleteTimer?.invalidate()
+    repeatingDeleteTimer?.invalidate()
+    initialDeleteTimer = nil
+    repeatingDeleteTimer = nil
+  }
+
+  private func startRepeatingTimer() {
+    repeatingDeleteTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+      haptic()
+      action() 
+    }
   }
   
   private func haptic() {
     UIImpactFeedbackGenerator(style: .light).impactOccurred()
   }
-  
+
 }
 
 struct KeyStyle {
