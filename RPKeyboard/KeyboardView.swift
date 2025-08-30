@@ -10,6 +10,7 @@ import SwiftUI
 enum KeyboardLayer {
   case lowercase
   case uppercase
+  case capslock
   case numeric
   case symbols
 }
@@ -47,7 +48,7 @@ struct KeyboardView: View {
   private var curRow1: [String] {
     switch curLayer {
     case .lowercase: return row1_lower
-    case .uppercase: return row1_upper
+    case .uppercase, .capslock: return row1_upper
     case .numeric: return row1_num
     case .symbols: return row1_sym
     }
@@ -56,7 +57,7 @@ struct KeyboardView: View {
   private var curRow2: [String] {
     switch curLayer {
     case .lowercase: return row2_lower
-    case .uppercase: return row2_upper
+    case .uppercase, .capslock: return row2_upper
     case .numeric: return row2_num
     case .symbols: return row2_sym
     }
@@ -65,7 +66,7 @@ struct KeyboardView: View {
   private var curRow3: [String] {
     switch curLayer {
     case .lowercase: return row3_lower
-    case .uppercase: return row3_upper
+    case .uppercase, .capslock: return row3_upper
     case .numeric: return row3_num
     case .symbols: return row3_sym
     }
@@ -73,7 +74,7 @@ struct KeyboardView: View {
   
   private var curBtmRow: [String] {
     switch curLayer {
-    case .lowercase, .uppercase:
+    case .lowercase, .uppercase, .capslock:
       return btmRow_alpha
     case .numeric, .symbols:
       return btmRow_num
@@ -90,7 +91,7 @@ struct KeyboardView: View {
 
   @Environment(\.colorScheme) private var scheme
   
-  // TODO: feat - long hold shift to lock uppercase
+  // TODO: feat - long press key to input variant values
   
   // TODO: feat - emoji keyboard layer
   
@@ -134,7 +135,12 @@ struct KeyboardView: View {
                 Spacer(minLength: 0)
               } else {
                 ForEach(curRow2, id: \.self) { key in
-                  KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) { handleKeyPress(for: key) }
+                  KeyButton(
+                    label: key,
+                    style: keyStyle(for: key),
+                    curLayer: curLayer) {
+                      handleKeyPress(for: key)
+                    }
                     .frame(width: stdW_10Key)
                 }
               }
@@ -155,10 +161,26 @@ struct KeyboardView: View {
                   return midKeyW
                 }()
                 
-                KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) {
-                  handleKeyPress(for: key)
+                // Shift button behaviors, long press for capslock
+                if key == "shift" {
+                  KeyButton(
+                    label: key,
+                    style: keyStyle(for: key),
+                    curLayer: curLayer,
+                    action: { handleKeyPress(for: key) },
+                    onLongPress: {
+                      withAnimation {
+                        curLayer = .capslock
+                      }
+                    }
+                  )
+                  .frame(width: keyWidth)
+                } else {
+                  KeyButton(label: key, style: keyStyle(for: key), curLayer: curLayer) {
+                    handleKeyPress(for: key)
+                  }
+                  .frame(width: keyWidth)
                 }
-                .frame(width: keyWidth)
               }
             }
             
@@ -201,10 +223,11 @@ struct KeyboardView: View {
     case "shift", "#+=":
       withAnimation(.easeInOut(duration: 0.1)) {
         switch curLayer {
-        case .lowercase: curLayer = .uppercase
-        case .uppercase: curLayer = .lowercase
-        case .numeric: curLayer = .symbols
-        case .symbols: curLayer = .numeric
+          case .lowercase: curLayer = .uppercase
+          case .uppercase: curLayer = .lowercase
+          case .capslock: curLayer = .lowercase
+          case .numeric: curLayer = .symbols
+          case .symbols: curLayer = .numeric
         }
       }
     case "123":
@@ -212,16 +235,16 @@ struct KeyboardView: View {
     case "ABC":
       withAnimation(.easeInOut(duration: 0.1)) { curLayer = .lowercase }
       
-      // Engine command keys
+    // Engine command keys
     case "delete":
       onKeyPress("{backspace}")
     case "return":
       onKeyPress("\n")
       
-      // Character keys
+    // Character keys
     default:
       onKeyPress(key)
-      // After typing an uppercase letter, return to lowercase
+      // Only returns to lowercase for temp uppercase layer
       if curLayer == .uppercase {
         curLayer = .lowercase
       }
@@ -257,10 +280,13 @@ struct KeyButton: View {
   let style: KeyStyle
   let curLayer: KeyboardLayer
   var action: () -> Void
-  
+  var onLongPress: (() -> Void)? = nil
   
   @State private var isPressed = false
-  // Delete button behaviors states
+  @State private var shiftLongPressTimer: Timer?
+  @State private var shiftLongPressOccured: Bool = false
+  
+  // Delete button behaviors states, separated from onLongPress
   @State private var initialDeleteTimer: Timer? // Rapid deletion
   @State private var repeatingDeleteTimer: Timer?
   @State private var accelerateDeleteTimer: Timer? // Accelerated deletion
@@ -269,7 +295,9 @@ struct KeyButton: View {
     Button {
       // single tap for all keys
       haptic()
-      action()
+      if !shiftLongPressOccured {
+        action()
+      }
     } label: {
       ZStack {
         RoundedRectangle(cornerRadius: KeyStyle.metrics.corner)
@@ -309,17 +337,25 @@ struct KeyButton: View {
             isPressed = true
             if label == "delete" {
               startDeleteTimers()
+            } else if label == "shift" {
+              shiftLongPressOccured = false
+              shiftLongPressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
+                shiftLongPressOccured = true
+                onLongPress?()
+                cancelShiftTimer()
+              }
             }
           }
         }
         .onEnded { _ in
           isPressed = false
           cancelDeleteTimers()
+          cancelShiftTimer()
         }
     )
   }
 
-  // ==== Speed control of deletion ====
+  // ==== Speed control of Deletion Key====
   
   private enum DeletionSpeed {
     case slow
@@ -369,6 +405,12 @@ struct KeyButton: View {
     initialDeleteTimer = nil
     repeatingDeleteTimer = nil
     accelerateDeleteTimer = nil
+  }
+  
+  // ==== Shift Key timer ===
+  private func cancelShiftTimer() {
+    shiftLongPressTimer?.invalidate()
+    shiftLongPressTimer = nil
   }
   
   private func haptic() {
@@ -424,9 +466,13 @@ struct KeyStyle {
     }
   }
   
+  // Icons
   func systemImage(for label: String, curLayer: KeyboardLayer) -> String? {
     switch label {
       case "shift", "#+=":
+        if curLayer == .capslock {
+          return "capslock.fill"
+        }
         return curLayer == .uppercase || curLayer == .symbols ? "shift.fill" : "shift"
       case "delete": return "delete.left"
       case "emoji": return "face.smiling"
